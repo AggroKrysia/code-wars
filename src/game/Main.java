@@ -5,19 +5,19 @@ import java.awt.*;
 public class Main {
     public static void main(String[] args) {
 
-        Frame f = new Frame("Demo");
-        f.setLayout(new FlowLayout());
-        f.setSize(200, 200);
-        Label l = new Label();
-        l.setText("This is a Game");
-        f.add(l);
-        f.setVisible(true);
+        Frame controllWindow = new Frame("Demo");
+        controllWindow.setLayout(new FlowLayout());
+        controllWindow.setSize(200, 200);
+        Label textInsideWindow = new Label();
+        textInsideWindow.setText("Click here to control game");
+        controllWindow.add(textInsideWindow);
+        controllWindow.setVisible(true);
 
         GameMap gameMap = new GameMap();
 
         GameController gameController = new GameController(gameMap);
 
-        f.addKeyListener(gameController);
+        controllWindow.addKeyListener(gameController);
     }
 }
 

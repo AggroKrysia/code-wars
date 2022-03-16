@@ -1,157 +1,156 @@
 package game;
 
-import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
 import static game.GameToken.*;
 
 public class GameMap {
 
     private GameToken[][] gameMap;
-    private static final int HEIGHT = 7;
-    private static final int WIDTH = 9;
+    private int sizeOfMap;
+    private List<Vector2d> vectors = Vector2d.createList();
+    private static final int DEFAULT_HEIGHT = 7;
+    private static final int DEFAULT_WIDTH = 9;
 
     public GameMap() {
-        gameMap = createEmptyMapWithPadding(HEIGHT, WIDTH);
+        gameMap = createEmptyMapWithPadding(DEFAULT_HEIGHT, DEFAULT_WIDTH);
+        sizeOfMap = (DEFAULT_HEIGHT - 1) * (DEFAULT_WIDTH - 2);
     }
 
-    public GameToken[][] createEmptyMapWithPadding(int height, int width) {
+    public GameMap(int height, int width) {
+        gameMap = createEmptyMapWithPadding(height, width);
+        sizeOfMap = (height - 1) * (width - 2);
+    }
+
+    private GameToken[][] createEmptyMapWithPadding(int height, int width) {
         GameToken[][] newMap = new GameToken[height][width];
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                newMap[i][j] = EMPTY;
-            }
+
+        for (GameToken[] row : newMap) {
+            Arrays.fill(row, EMPTY);
         }
-        for (int i = 0; i < width; i++) {
-            newMap[height - 1][i] = PADDING;
+        for (int bottomRow = 0; bottomRow < width; bottomRow++) {
+            newMap[height - 1][bottomRow] = PADDING;
         }
-        for (int i = 0; i < height; i++) {
-            newMap[i][0] = PADDING;
+        for (int firstColumn = 0; firstColumn < height; firstColumn++) {
+            newMap[firstColumn][0] = PADDING;
         }
-        for (int i = 0; i < height; i++) {
-            newMap[i][width - 1] = PADDING;
+        for (int lastComulm = 0; lastComulm < height; lastComulm++) {
+            newMap[lastComulm][width - 1] = PADDING;
         }
         return newMap;
     }
 
-    public void printMapWithoutPadding() {
-        System.out.println();
-        for (int i = 0; i < HEIGHT - 1; i++) {
-            System.out.print("|");
-            for (int j = 1; j < WIDTH - 1; j++) {
+    public StringBuilder prepare() {
+        StringBuilder map = new StringBuilder();
+        for (int i = 0; i < DEFAULT_HEIGHT - 1; i++) {
+            map.append("|");
+            for (int j = 1; j < DEFAULT_WIDTH - 1; j++) {
                 switch (gameMap[i][j]) {
                     case EMPTY:
-                        System.out.print("0");
+                        map.append("0");
                         break;
                     case PLAYER_ONE:
-                        System.out.print("z");
+                        map.append("z");
                         break;
                     case PLAYER_TWO:
-                        System.out.print("x");
+                        map.append("x");
                         break;
                     case PADDING:
-                        System.out.print("error");
+                        map.append("error");
                         break;
                     default:
                         throw new IllegalStateException("Unexpected value: " + gameMap[i][j]);
                 }
-                System.out.print("|");
+                map.append("|");
             }
-            System.out.println();
-            System.out.print("________________");
-            System.out.println();
+            map.append("\n");
+            map.append("_______________");
+            map.append("\n");
         }
+        return map;
     }
 
-    public int returnPositionY(int positionX) {
+    public int getFirstEmptyY(int positionX) {
         int positionY = 0;
-        while (positionY < HEIGHT) {
+        while (positionY < DEFAULT_HEIGHT) {
             if (gameMap[positionY][positionX] != EMPTY) {
-                return positionY;
+                return positionY - 1;
             }
             positionY++;
         }
         return positionY;
     }
 
-    public void placeToken(int positionX, int positionY, GameToken player) {
-        gameMap[positionY - 1][positionX] = player;
+    public void placeToken(int positionX, int positionY, GameToken token) {
+        gameMap[positionY][positionX] = token;
     }
 
-    public boolean checkLastTokenIfWin(int positionX, int positionY) {
-        positionY = positionY - 1;
+    public boolean checkLastTokenForWin(int positionX, int positionY) {
         GameToken currentPlayer = gameMap[positionY][positionX];
         if (gameMap[positionY][positionX - 1] == currentPlayer) {
-            return checkForWin(positionY, positionY, positionX, positionX - 1, currentPlayer);
-
+            if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(0), currentPlayer)
+                    + getNumberOfTokensInLine(positionY, positionX, vectors.get(4), currentPlayer) >= 4) {
+                return true;
+            }
         }
         if (gameMap[positionY + 1][positionX - 1] == currentPlayer) {
-            return checkForWin(positionY, positionY + 1, positionX, positionX - 1, currentPlayer);
-
+            if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(1), currentPlayer)
+                    + getNumberOfTokensInLine(positionY, positionX, vectors.get(5), currentPlayer) >= 4) {
+                return true;
+            }
         }
         if (gameMap[positionY + 1][positionX] == currentPlayer) {
-            return checkForWin(positionY, positionY + 1, positionX, positionX, currentPlayer);
-
+            if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(2), currentPlayer)
+                    + getNumberOfTokensInLine(positionY, positionX, vectors.get(6), currentPlayer) >= 4) {
+                return true;
+            }
         }
         if (gameMap[positionY + 1][positionX + 1] == currentPlayer) {
-            return checkForWin(positionY, positionY + 1, positionX, positionX + 1, currentPlayer);
+            if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(3), currentPlayer)
+                    + getNumberOfTokensInLine(positionY, positionX, vectors.get(7), currentPlayer) >= 4) {
+                return true;
+            }
 
         }
         if (gameMap[positionY][positionX + 1] == currentPlayer) {
-            return checkForWin(positionY, positionY, positionX, positionX + 1, currentPlayer);
+            if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(4), currentPlayer)
+                    + getNumberOfTokensInLine(positionY, positionX, vectors.get(0), currentPlayer) >= 4) {
+                return true;
+            }
         }
         return false;
     }
 
-    public boolean checkForWin(int positionY, int positionYNext, int positionX, int positionXNext, GameToken player) {
-        int vectorY = positionYNext - positionY;
-        int vectorX = positionXNext - positionX;
+    private int getNumberOfTokensInLine(int positionY, int positionX, Vector2d vector, GameToken player) {
+        int numberOfTokens = 0;
+        int vectorY = vector.getY();
+        int vectorX = vector.getX();
         for (int i = 1; i <= 3; i++) {
             if (gameMap[positionY + vectorY * i][positionX + vectorX * i] != player) {
-                return false;
+                return numberOfTokens;
             }
+            numberOfTokens++;
         }
-        return true;
+        return numberOfTokens;
     }
 
-    public boolean checkIfEmpty() {
-        for (int i = 0; i < HEIGHT - 1; i++) {
-            for (int j = 1; j < WIDTH - 1; j++) {
-                if (gameMap[i][j] == EMPTY) {
-                    return true;
-                }
-            }
-        }
-        return false;
+    public boolean isAnySpaceFree() {
+        sizeOfMap = sizeOfMap - 1;
+        return sizeOfMap >= 0;
     }
 
-    public void clearConsole() {
-        try {
-            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-        } catch (InterruptedException ex) {
-            ex.printStackTrace();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    public void printPlayerMoves(int position) {
-        System.out.print("|");
-        for (int i = 1; i <= 7; i++) {
+    public StringBuilder preparePlayerMoves(int position) {
+        StringBuilder playerMoves = new StringBuilder();
+        playerMoves.append("|");
+        for (int i = 1; i <= DEFAULT_HEIGHT; i++) {
             if (i == position) {
-                System.out.print("v|");
+                playerMoves.append("v|");
             } else {
-                System.out.print("_|");
+                playerMoves.append("_|");
             }
         }
-        System.out.println();
+        playerMoves.append("\n");
+        return playerMoves;
     }
-
-    public GameToken changePlayer(GameToken player) {
-        if (player == PLAYER_ONE) {
-            return PLAYER_TWO;
-        } else {
-            return PLAYER_ONE;
-        }
-    }
-
 }

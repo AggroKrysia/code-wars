@@ -2,6 +2,7 @@ package game;
 
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.IOException;
 
 import static game.GameToken.*;
 
@@ -39,9 +40,9 @@ public class GameController implements KeyListener {
                 executeTurn(player);
             } catch (IndexOutOfBoundsException er) {
                 System.out.print("Nie da się włożyć w tej kolumnie więcej tokenów. Spróbuj innej.");
-                player = gameMap.changePlayer(player);
+                player = changePlayer(player);
             }
-            player = gameMap.changePlayer(player);
+            player = changePlayer(player);
         }
     }
 
@@ -62,13 +63,13 @@ public class GameController implements KeyListener {
     }
 
     private void executeTurn(GameToken player) {
-        int posY = gameMap.returnPositionY(posX);
+        int posY = gameMap.getFirstEmptyY(posX);
         gameMap.placeToken(posX, posY, player);
-        if (!gameMap.checkIfEmpty()) {
+        if (!gameMap.isAnySpaceFree()) {
             System.out.print("Brak wolnych miejsc. Koniec gry!");
             System.exit(0);
         }
-        if (gameMap.checkLastTokenIfWin(posX, posY)) {
+        if (gameMap.checkLastTokenForWin(posX, posY)) {
             System.out.print("Gracz " + player + " wygral!");
             System.exit(0);
         }
@@ -77,10 +78,27 @@ public class GameController implements KeyListener {
     }
 
     public void refreshScreen(int position) {
-        gameMap.clearConsole();
+        clearConsole();
         System.out.println("Ruch gracza " + player);
-        gameMap.printPlayerMoves(position);
-        gameMap.printMapWithoutPadding();
+        System.out.println(gameMap.preparePlayerMoves(position));
+        System.out.println(gameMap.prepare());
     }
 
+    public void clearConsole() {
+        try {
+            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+        } catch (InterruptedException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public GameToken changePlayer(GameToken player) {
+        if (player == PLAYER_ONE) {
+            return PLAYER_TWO;
+        } else {
+            return PLAYER_ONE;
+        }
+    }
 }
