@@ -1,0 +1,12 @@
+diff a/src/game/GameController.java b/src/game/GameController.java	(rejected hunks)
+@@ -38,6 +44,10 @@ public class GameController implements KeyListener {
+         if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+             try {
+                 executeTurn(player);
++                // Why don't you handle the overflow in "executeTurn"? You check for first free Y and you have access to map height, this should be trivial.
++                // First, switching players should be handled in "executeTurn", as "keyPressed" is just an event handler. You shouldn't place any logic here, only delegate it to another function.
++                // Second, You should only switch players when they should be switched. Switching back and forth could cause undesired behavior if some additional logic was added to
++                // player change (like firing events, notifications, displaying stuff etc.)
+             } catch (IndexOutOfBoundsException er) {
+                 System.out.print("Nie da si─Ö w┼éo┼╝y─ç w tej kolumnie wi─Öcej token├│w. Spr├│buj innej.");
+                 player = changePlayer(player);

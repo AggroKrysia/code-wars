@@ -1,0 +1,221 @@
+diff --git a/src/game/GameController.java b/src/game/GameController.java
+index 2bc4a87..be3edaa 100644
+--- a/src/game/GameController.java
++++ b/src/game/GameController.java
+@@ -9,9 +9,14 @@ import static game.GameToken.*;
+ public class GameController implements KeyListener {
+ 
+     private static final int START_X_POSITION = 1;
++    // I'd call it X_POS_DELTA or sth. Variables should be nouns, naming "things". "Change" is a verb, suggesting action (thus, a function)
+     private static final int CHANGE_X_POS = 1;
++    // Why final? What if we want to play again after finishing a game? Would be a waste to restart the application.
++    // Consider adding such functionality
+     private final GameMap gameMap;
++    // currentPosX. Or maybe markerPosition (since it ony moves on xes anyway)?
+     int posX;
++    // currentPlayer
+     GameToken player;
+ 
+     GameController(GameMap gameMap) {
+@@ -27,6 +32,7 @@ public class GameController implements KeyListener {
+ 
+     @Override
+     public void keyPressed(KeyEvent e) {
++        // Wouldn't a switch statement look better here?
+         if (e.getKeyCode() == KeyEvent.VK_LEFT) {
+             posX = movePosX(posX, -CHANGE_X_POS);
+             refreshScreen(posX);
+@@ -38,6 +44,10 @@ public class GameController implements KeyListener {
+         if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+             try {
+                 executeTurn(player);
++                // Why don't you handle the overflow in "executeTurn"? You check for first free Y and you have access to map height, this should be trivial.
++                // First, switching players should be handled in "executeTurn", as "keyPressed" is just an event handler. You shouldn't place any logic here, only delegate it to another function.
++                // Second, You should only switch players when they should be switched. Switching back and forth could cause undesired behavior if some additional logic was added to
++                // player change (like firing events, notifications, displaying stuff etc.)
+             } catch (IndexOutOfBoundsException er) {
+                 System.out.print("Nie da si─Ö w┼éo┼╝y─ç w tej kolumnie wi─Öcej token├│w. Spr├│buj innej.");
+                 player = changePlayer(player);
+@@ -50,9 +60,11 @@ public class GameController implements KeyListener {
+     public void keyReleased(KeyEvent e) {
+     }
+ 
+-    public int movePosX(int actualXpos, int change) {
++    public int movePosX(int actualXpos, int change) {//private
++        // Declare and assign in one line
+         int newXpos;
+         newXpos = actualXpos + change;
++        // Magic numbers. Use map width
+         if (newXpos < 1) {
+             newXpos = 7;
+         }
+@@ -64,7 +76,9 @@ public class GameController implements KeyListener {
+ 
+     private void executeTurn(GameToken player) {
+         int posY = gameMap.getFirstEmptyY(posX);
++        // I suggest handling the exception here, or adding a sanity check like "Y < map.height"
+         gameMap.placeToken(posX, posY, player);
++        // Switch the ifs order. What if the final move is the winning one?
+         if (!gameMap.isAnySpaceFree()) {
+             System.out.print("Brak wolnych miejsc. Koniec gry!");
+             System.exit(0);
+@@ -77,14 +91,14 @@ public class GameController implements KeyListener {
+         refreshScreen(posX);
+     }
+ 
+-    public void refreshScreen(int position) {
++    public void refreshScreen(int position) {//private
+         clearConsole();
+         System.out.println("Ruch gracza " + player);
+         System.out.println(gameMap.preparePlayerMoves(position));
+         System.out.println(gameMap.prepare());
+     }
+ 
+-    public void clearConsole() {
++    public void clearConsole() {//private
+         try {
+             new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+         } catch (InterruptedException ex) {
+@@ -94,6 +108,8 @@ public class GameController implements KeyListener {
+         }
+     }
+ 
++    // No point passing "player" to this function nor returning it when it's a class member.
++    // Change the signature to "private void switchPlayer()" and adjust implementation
+     public GameToken changePlayer(GameToken player) {
+         if (player == PLAYER_ONE) {
+             return PLAYER_TWO;
+diff --git a/src/game/GameMap.java b/src/game/GameMap.java
+index d64d021..c8742f5 100644
+--- a/src/game/GameMap.java
++++ b/src/game/GameMap.java
+@@ -8,17 +8,27 @@ import static game.GameToken.*;
+ public class GameMap {
+ 
+     private GameToken[][] gameMap;
++    // In general "sizeOf" is associated with constant or at least semi-constant variables that don't change much
++    // This should be called "emptyFieldsRemaining" or such
+     private int sizeOfMap;
++    // This is very unnecessary and extremely unreadable without delving into Vector2d class.
++    // Delete this variable, the createList function (btw, poor name) and create the required vectors in place.
++    // Reasoning: Vector2d(0,1) is FAR more readable than vectors[4]
+     private List<Vector2d> vectors = Vector2d.createList();
+     private static final int DEFAULT_HEIGHT = 7;
+     private static final int DEFAULT_WIDTH = 9;
+ 
+     public GameMap() {
++        // Why not just call the other constructor?
++        // GameMap(DEFAULT_HEIGHT, DEFAULT_WIDTH);
+         gameMap = createEmptyMapWithPadding(DEFAULT_HEIGHT, DEFAULT_WIDTH);
+         sizeOfMap = (DEFAULT_HEIGHT - 1) * (DEFAULT_WIDTH - 2);
+     }
+ 
+     public GameMap(int height, int width) {
++        // I would argue that this is bad design, having padding inserted into user-requested dimensions.
++        // When I request GameMap(5,5) I expect 25 fields of playing space. Instead I get 12.
++        // Padding, as an implementation detail, should be transparent to the user, so you should attach it *on top* of requested map size 
+         gameMap = createEmptyMapWithPadding(height, width);
+         sizeOfMap = (height - 1) * (width - 2);
+     }
+@@ -35,12 +45,14 @@ public class GameMap {
+         for (int firstColumn = 0; firstColumn < height; firstColumn++) {
+             newMap[firstColumn][0] = PADDING;
+         }
++        // Typo
+         for (int lastComulm = 0; lastComulm < height; lastComulm++) {
+             newMap[lastComulm][width - 1] = PADDING;
+         }
+         return newMap;
+     }
+ 
++    // "prepare" what? Make the name more meaningful
+     public StringBuilder prepare() {
+         StringBuilder map = new StringBuilder();
+         for (int i = 0; i < DEFAULT_HEIGHT - 1; i++) {
+@@ -89,6 +101,7 @@ public class GameMap {
+     public boolean checkLastTokenForWin(int positionX, int positionY) {
+         GameToken currentPlayer = gameMap[positionY][positionX];
+         if (gameMap[positionY][positionX - 1] == currentPlayer) {
++            // I think the arithmetics of counting tokens in line should be all moved to the designated function (see comment for the next function)
+             if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(0), currentPlayer)
+                     + getNumberOfTokensInLine(positionY, positionX, vectors.get(4), currentPlayer) >= 4) {
+                 return true;
+@@ -113,6 +126,7 @@ public class GameMap {
+             }
+ 
+         }
++        // Umm, why do you check for vectors 4 and 0 when you already chcked for 0,4?
+         if (gameMap[positionY][positionX + 1] == currentPlayer) {
+             if (1 + getNumberOfTokensInLine(positionY, positionX, vectors.get(4), currentPlayer)
+                     + getNumberOfTokensInLine(positionY, positionX, vectors.get(0), currentPlayer) >= 4) {
+@@ -126,6 +140,10 @@ public class GameMap {
+         int numberOfTokens = 0;
+         int vectorY = vector.getY();
+         int vectorX = vector.getX();
++        // Limiting to three checked tokens makes sense, but I'd argue since the function's called "getNumberOfTokensInLine" you should count tokens
++        // until you find a different one
++        // I would also consider having the function go both ways (i.e. count the origin token as 1, and check for tokens in both directions),
++        // this will make usage a bit more straightforward
+         for (int i = 1; i <= 3; i++) {
+             if (gameMap[positionY + vectorY * i][positionX + vectorX * i] != player) {
+                 return numberOfTokens;
+@@ -136,14 +154,21 @@ public class GameMap {
+     }
+ 
+     public boolean isAnySpaceFree() {
++        // Hidden side effect, that's dangerous if you don't know the code by heart
++        // Move the decrementation somewhere else (when a token is placed?)
+         sizeOfMap = sizeOfMap - 1;
+         return sizeOfMap >= 0;
+     }
+ 
++    // this is not very descriptive, can mean a whole lot of things. Perhaps "preparePickedColumnDisplay"?
++    // Something that will signify that it's a part of interface, not direct control
++    // Also, "position"->"currentPosition"
+     public StringBuilder preparePlayerMoves(int position) {
+         StringBuilder playerMoves = new StringBuilder();
+         playerMoves.append("|");
+         for (int i = 1; i <= DEFAULT_HEIGHT; i++) {
++            // You could use a ternary operator here for brevity:
++            // playerMoves.append((i == position) ? "v|" : "_|");
+             if (i == position) {
+                 playerMoves.append("v|");
+             } else {
+diff --git a/src/game/Main.java b/src/game/Main.java
+index 0387c35..8bc8c9b 100644
+--- a/src/game/Main.java
++++ b/src/game/Main.java
+@@ -1,10 +1,11 @@
+ package game;
+ 
+ import java.awt.*;
+-
++// You could add a summary (either as a comment here or on git description) of what this game actually is and its ruleset.
++// It will make it easier to understand the project
+ public class Main {
+     public static void main(String[] args) {
+-
++// Typo, "ll"
+         Frame controllWindow = new Frame("Demo");
+         controllWindow.setLayout(new FlowLayout());
+         controllWindow.setSize(200, 200);
+diff --git a/src/game/Vector2d.java b/src/game/Vector2d.java
+index eb3312c..4566d91 100644
+--- a/src/game/Vector2d.java
++++ b/src/game/Vector2d.java
+@@ -7,11 +7,15 @@ public class Vector2d {
+     private final int x;
+     private final int y;
+ 
++    // To make the class that much more useful I'd suggest adding '+' and '*' operators. This will make the logic clearer and simpler when
++    // you use these vectors to calculate the length of a line of tokens
+     public Vector2d(int y, int x) {
+         this.x = x;
+         this.y = y;
+     }
+ 
++    // This is not your fault, more of a stupidly widespread delusion that placing getters and setters everywhere makes the code cleaner and better.
++    // I'd argue it makes it more bloated with useless functions. You can achieve exactly same results if you declare x/y as public final.
+     public int getX() {
+         return x;
+     }
